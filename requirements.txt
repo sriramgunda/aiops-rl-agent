@@ -1,0 +1,9 @@
+pandas
+numpy
+gymnasium
+stable-baselines3
+sentence-transformers
+faiss-cpu
+fastapi
+uvicorn
+openai
