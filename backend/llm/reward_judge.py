@@ -1,10 +1,4 @@
-import sys
-from pathlib import Path
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-
-import json
 import ollama
-
 from openai import OpenAI
 
 from dotenv import load_dotenv
@@ -12,30 +6,33 @@ from dotenv import load_dotenv
 env= load_dotenv()
 
 client=OpenAI()
-MODEL = env.get("RCA_MODEL", "qwen2.5:7b")
 
-def analyze_incident(state, retrieved_context):
+MODEL = env.get("REWARD_JUDGE_MODEL", "llama3.1:8b")
+
+def judge_trajectory(trajectory):
 
     prompt=f"""
 
-You are an SRE incident analyst.
-System state:
-{state}
+You are an expert SRE evaluator.
+Evaluate remediation quality.
 
-Historical incidents:
-{retrieved_context}
+Trajectory:
+{trajectory}
 
-Identify:
-1. probable root cause
-2. recommended remediation
+Return score between 0 and 1.
 
-Respond JSON only.
+Return JSON ONLY.
+
+{{
+"reward":float,
+"reason":"..."
+}}
 
 """
-
     if env.get("LLM_PROVIDER") == "openai":
         response = client.chat.completions.create(
             model=MODEL,
+            temperature=0,
             messages=[
             {
                 "role":"user",
@@ -55,5 +52,4 @@ Respond JSON only.
             }
             ]
         )
-        content = response["message"]["content"]
-        return json.loads(content)
+        return response["message"]["content"]
