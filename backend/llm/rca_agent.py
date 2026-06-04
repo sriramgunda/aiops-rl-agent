@@ -4,15 +4,19 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 import json
 import ollama
+import os
 
 from openai import OpenAI
 
 from dotenv import load_dotenv
 
-env= load_dotenv()
+# load environment variables from a .env file into os.environ
+load_dotenv()
 
-client=OpenAI()
-MODEL = env.get("RCA_MODEL", "qwen2.5:7b")
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "test")
+
+client = OpenAI(api_key=OPENAI_API_KEY)
+MODEL = os.getenv("RCA_MODEL", "qwen2.5:7b")
 
 def analyze_incident(state, retrieved_context):
 
@@ -31,9 +35,24 @@ Identify:
 
 Respond JSON only.
 
+{{
+"root_cause":"cpu_spike|memory_leak|service_crash|db_latency|dependency_failure",
+
+"confidence":0.0,
+
+"recommended_action":
+"recommend_restart_service|
+recommend_scale_up|
+recommend_clear_cache|
+recommend_rollback|
+recommend_dependency_check|
+recommend_no_action"
+
+}}
+
 """
 
-    if env.get("LLM_PROVIDER") == "openai":
+    if os.getenv("LLM_PROVIDER") == "openai":
         response = client.chat.completions.create(
             model=MODEL,
             messages=[
@@ -45,7 +64,7 @@ Respond JSON only.
         )
         return response.choices[0].message.content
     
-    if env.get("LLM_PROVIDER") == "ollama":
+    if os.getenv("LLM_PROVIDER") == "ollama":
         response = ollama.chat(
             model=MODEL,
             messages=[
@@ -55,5 +74,12 @@ Respond JSON only.
             }
             ]
         )
-        content = response["message"]["content"]
+        try:
+            content = response["message"]["content"]
+        except KeyError:
+            print("Unexpected response format from Ollama:", response)
+            raise
+        except Exception as e:
+            print("Error processing Ollama response:", e)
+            raise
         return json.loads(content)

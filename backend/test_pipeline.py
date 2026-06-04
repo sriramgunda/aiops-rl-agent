@@ -8,7 +8,7 @@ from llm.rca_agent import analyze_incident
 rag = RAGEngine()
 
 rag.load_documents(
-"datasets/runbooks/historical_incidents.json"
+"backend/datasets/runbooks/historical_incidents.json"
 )
 
 state={

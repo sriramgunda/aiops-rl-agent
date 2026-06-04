@@ -2,12 +2,14 @@ import ollama
 from openai import OpenAI
 
 from dotenv import load_dotenv
+import os
 
-env= load_dotenv()
+load_dotenv()
 
-client=OpenAI()
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "test")
+client = OpenAI(api_key=OPENAI_API_KEY)
 
-MODEL = env.get("REWARD_JUDGE_MODEL", "llama3.1:8b")
+MODEL = os.getenv("REWARD_JUDGE_MODEL", "llama3.1:8b")
 
 def judge_trajectory(trajectory):
 
@@ -29,7 +31,7 @@ Return JSON ONLY.
 }}
 
 """
-    if env.get("LLM_PROVIDER") == "openai":
+    if os.getenv("LLM_PROVIDER") == "openai":
         response = client.chat.completions.create(
             model=MODEL,
             temperature=0,
@@ -42,7 +44,7 @@ Return JSON ONLY.
         )
         return response.choices[0].message.content
     
-    if env.get("LLM_PROVIDER") == "ollama":
+    if os.getenv("LLM_PROVIDER") == "ollama":
         response = ollama.chat(
             model=MODEL,
             messages=[

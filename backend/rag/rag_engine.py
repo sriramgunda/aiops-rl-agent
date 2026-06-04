@@ -32,4 +32,14 @@ class RAGEngine:
         query_emb = self.model.encode([query])
         D,I = self.index.search(np.array(query_emb), k)
         print(f"Retrieved documents for query: '{query}'")
-        return [self.docs[i] for i in I[0]]
+        results=[]
+        # D contains the distances (similarity scores) and I contains the indices of the retrieved documents
+        for score,idx in zip(D[0], I[0]):
+            results.append({
+                "document":self.docs[idx],
+                "distance":float(score)
+            })
+        # This provides the retrieved documents along with their similarity scores,
+        # which can be used for further analysis or generation by an LLM.
+        # Also gives us retrieval_confidence for RL state.
+        return results
