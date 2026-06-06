@@ -53,6 +53,23 @@ rollback         : 0
 - For instance, here are sample metrics [90,60,250,10] and agent is trying to infer incident class from noisy metrics.
 - Also, the environment is configured to stop after single action that means agents not learning the sequential remediation. This is set for one step environment intentionally to see the results of DQN and PPO by providing minimal details about state and environment,
 
+#### Plot Comparison
+- DQN vs PPO Accuracy comparison
+![DQN vs PPO Accuracy comparison](https://raw.githubusercontent.com/sriramgunda/aiops-rl-agent/refs/heads/feature/v1/results/plots/accuracy_comparison_initial.png)
+
+- Reward comparison
+![Reward comparison](https://raw.githubusercontent.com/sriramgunda/aiops-rl-agent/refs/heads/feature/v1/results/plots/reward_comparison_initial.png)
+
+- Action comparison
+![Action comparison](https://raw.githubusercontent.com/sriramgunda/aiops-rl-agent/refs/heads/feature/v1/results/plots/action_comparison_initial.png)
+
+- DQN Action distribution
+![DQN Actions](https://raw.githubusercontent.com/sriramgunda/aiops-rl-agent/refs/heads/feature/v1/results/plots/dqn_action_distribution_initial.png)
+
+- PPO Action distribution
+![PPO Actions](https://raw.githubusercontent.com/sriramgunda/aiops-rl-agent/refs/heads/feature/v1/results/plots/ppo_action_distribution_initial.png)
+
+
 ### Phase 2 - Train DQN and PPO with RAG and RCA
 #### Integrated RCA and RAG
 - **Architecture**: metrics -> RAG -> RCA -> incident class, confidence -> RL agent (DQN/PPO)
@@ -93,3 +110,23 @@ rollback         : 0
 - PPO policy collapse still exists. PPO has learned that restart_service policy is usually safe and keeps exploiting it.
 - DQN performed well here because, there is no sequential action decisions. Environment has single step decision and discrete actions, so DQN eventually improved better with more information.
 - In a single-step incident remediation recommendation environment, DQN outperformed PPO after incorporating RCA-derived state information.
+
+#### Plot Comparison
+- DQN vs PPO Accuracy comparison
+![DQN vs PPO Accuracy comparison](https://raw.githubusercontent.com/sriramgunda/aiops-rl-agent/refs/heads/feature/v1/results/plots/accuracy_comparison_after_rca.png)
+
+- Reward comparison
+![Reward comparison](https://raw.githubusercontent.com/sriramgunda/aiops-rl-agent/refs/heads/feature/v1/results/plots/reward_comparison_after_rca.png)
+
+- Action comparison
+![Action comparison](https://raw.githubusercontent.com/sriramgunda/aiops-rl-agent/refs/heads/feature/v1/results/plots/action_comparison_rca.png)
+
+- DQN Action distribution
+![DQN Actions](https://raw.githubusercontent.com/sriramgunda/aiops-rl-agent/refs/heads/feature/v1/results/plots/dqn_action_distribution_rca.png)
+
+- PPO Action distribution
+![PPO Actions](https://raw.githubusercontent.com/sriramgunda/aiops-rl-agent/refs/heads/feature/v1/results/plots/ppo_action_distribution_rca.png)
+
+- Impact of adding RCA
+![RCA Impact](https://raw.githubusercontent.com/sriramgunda/aiops-rl-agent/refs/heads/feature/v1/results/plots/rca_impact.png)
+
