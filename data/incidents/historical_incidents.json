@@ -1,0 +1,32 @@
+[
+  {
+    "incident":"cpu_spike",
+    "symptoms":"CPU above 85 percent, latency increase",
+    "root_cause":"traffic surge",
+    "recommended_action":"scale_up"
+  },
+  {
+    "incident":"memory_leak",
+    "symptoms":"memory above 85 percent, pod restarts",
+    "root_cause":"application memory leak",
+    "recommended_action":"restart_service"
+  },
+  {
+    "incident":"service_crash",
+    "symptoms":"500 errors, service unavailable",
+    "root_cause":"container crash",
+    "recommended_action":"restart_service"
+  },
+  {
+    "incident":"db_latency",
+    "symptoms":"database response time high",
+    "root_cause":"database bottleneck",
+    "recommended_action":"clear_cache"
+  },
+  {
+    "incident":"dependency_failure",
+    "symptoms":"upstream timeout, dependency unavailable",
+    "root_cause":"external dependency outage",
+    "recommended_action":"dependency_check"
+  }
+]
