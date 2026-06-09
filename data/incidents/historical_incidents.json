@@ -1,32 +1,43 @@
 [
   {
     "incident":"cpu_spike",
-    "symptoms":"CPU above 85 percent, latency increase",
+    "symptoms":"high cpu utilization, application slowdown, traffic surge",
     "root_cause":"traffic surge",
     "recommended_action":"scale_up"
   },
+
   {
     "incident":"memory_leak",
-    "symptoms":"memory above 85 percent, pod restarts",
+    "symptoms":"memory exhaustion, pod restart, memory leak, high memory consumption",
     "root_cause":"application memory leak",
     "recommended_action":"restart_service"
   },
+
   {
     "incident":"service_crash",
-    "symptoms":"500 errors, service unavailable",
+    "symptoms":"service unavailable, 500 errors, application crash, pod crash, container restart, application unavailable",
     "root_cause":"container crash",
     "recommended_action":"restart_service"
   },
+
   {
     "incident":"db_latency",
-    "symptoms":"database response time high",
+    "symptoms":"database timeout, database response delay, query timeout, database bottleneck",
     "root_cause":"database bottleneck",
     "recommended_action":"clear_cache"
   },
+
   {
     "incident":"dependency_failure",
-    "symptoms":"upstream timeout, dependency unavailable",
+    "symptoms":"upstream timeout, dependency unavailable, external service failure, downstream service unavailable",
     "root_cause":"external dependency outage",
     "recommended_action":"dependency_check"
+  },
+
+  {
+    "incident":"no_incident",
+    "symptoms":"nothing",
+    "root_cause":"false alert",
+    "recommended_action":"no_action"
   }
 ]

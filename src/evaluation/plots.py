@@ -207,7 +207,7 @@ action_df.set_index("Action").plot(kind="bar",figsize=(10,5))
 plt.ylabel("Count")
 plt.title("Action Selection Comparison")
 plt.tight_layout()
-plt.savefig(PLOTS_DIR / "action_comparison.png")
+plt.savefig(PLOTS_DIR / "action_comparison_initial.png")
 plt.show()
 
 # Phase 2 - DQN vs PPO action distribution comparison after RCA augmentation

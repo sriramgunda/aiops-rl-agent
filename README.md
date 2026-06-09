@@ -3,10 +3,6 @@
 ### Phase 1 - Train DQN and PPO only
 - **Architecture**: metrics -> RL agent (DQN/PPO)
 - **Workflow**: incident -> action -> reward -> Done
-- **DQN results**: 
-  {'avg_reward': 24.01, 'max_reward': 50, 'min_reward': -30, 'action_accuracy': 0.605, 'action_distribution': {'restart_service': 481, 'clear_cache': 500, 'dependency_check': 19}}
-- **PPO results**:
-{'avg_reward': 29.89, 'max_reward': 50, 'min_reward': -30, 'action_accuracy': 0.663, 'action_distribution': {'restart_service': 703, 'clear_cache': 195, 'scale_up': 102}}
 - **MDP Formulation**:
 	- ***State Space***
 		- S = [cpu, memory, latency, error_rate ]
@@ -21,7 +17,10 @@
 	- ***Policy***
 		- DQN - π_DQN(a|s)
 		- PPO - π_PPO(a|s)
-
+- **DQN results**: 
+  {'avg_reward': 24.01, 'max_reward': 50, 'min_reward': -30, 'action_accuracy': 0.605, 'action_distribution': {'restart_service': 481, 'clear_cache': 500, 'dependency_check': 19}}
+- **PPO results**:
+{'avg_reward': 29.89, 'max_reward': 50, 'min_reward': -30, 'action_accuracy': 0.663, 'action_distribution': {'restart_service': 703, 'clear_cache': 195, 'scale_up': 102}}
 
 #### Comparison
 |Metric|DQN|PPO
@@ -77,10 +76,6 @@ rollback         : 0
 - The state has additional information metrics + incident class + confidence
 - The state now becomes [cpu, memory, latency, error_rate, incident_id, confidence]
 - Added historical incidents, RAG retriever, RCA (without LLM, extract rca details from past incidents labels and metadata), state_builder (included incident type and confidence), integrated RAG and RCA into AIOps environment
-- **DQN results**: 
-  {'avg_reward': 33.7, 'max_reward': 50, 'min_reward': -30, 'action_accuracy': 0.788, 'action_distribution': {'restart_service': 421, 'clear_cache': 320, 'scale_up': 259}}
-- **PPO results**:
-{'avg_reward': 22.925, 'max_reward': 50, 'min_reward': -10, 'action_accuracy': 0.527, 'action_distribution': {'restart_service': 828, 'scale_up': 123, 'clear_cache': 49}}
 - **MDP Formulation**:
 	- ***State Space***
 		- S = [cpu, memory, latency, error_rate, incident_class, confidence]
@@ -95,6 +90,11 @@ rollback         : 0
 	- ***Policy***
 		- DQN - π_DQN(a|s)
 		- PPO - π_PPO(a|s)
+- **DQN results**: 
+  {'avg_reward': 33.7, 'max_reward': 50, 'min_reward': -30, 'action_accuracy': 0.788, 'action_distribution': {'restart_service': 421, 'clear_cache': 320, 'scale_up': 259}}
+- **PPO results**:
+{'avg_reward': 22.925, 'max_reward': 50, 'min_reward': -10, 'action_accuracy': 0.527, 'action_distribution': {'restart_service': 828, 'scale_up': 123, 'clear_cache': 49}}
+
 
 #### Comparison
 |Model|Average reward|Accuracy 
@@ -130,3 +130,59 @@ rollback         : 0
 - Impact of adding RCA
 ![RCA Impact](https://raw.githubusercontent.com/sriramgunda/aiops-rl-agent/refs/heads/feature/v1/results/plots/rca_impact.png)
 
+
+### Phase 3 - Train DQN and PPO with multi-step remediation
+#### Added multi-step MDP remediation and observability signals for RL agents to learn
+- **Architecture**: metrics -> RAG -> RCA -> incident class, confidence -> RL agent (DQN/PPO)
+- **Workflow**: incident -> action 1 -> update metrics -> action 2 -> update metrics -> action 3 -> Resolved
+- Incident will be marked as resolved if latency < 300ms and error_rate < 5 or max_steps = 5
+- Implemented structured reward function using metrics.
+- Updated metrics clamping to avoid negative values.
+- MTTR metric is introduced for baseline comparison along with other metrics
+- Assumption made for step time duration as 5min to calculate MTTR. That means, if agent takes 3 steps to complete then MTTR will be 3 * 5 = 15min.
+- Considering the simulated AIOps environment, Mean Time To Resolve (MTTR) is approximated using the number of remediation actions required to successfully resolve an incident. Each remediation step is assumed to represent a fixed operational interval of five minutes. Therefore, MTTR is calculated as:
+MTTR = Average Successful Resolution Steps × 5 minutes
+This approximation enables quantitative comparison of remediation efficiency across DQN, PPO, and LLM-guided reinforcement learning agents while maintaining consistency across experimental conditions.
+- **MDP Formulation**:
+	- State -> Action -> New State -> Action -> New State -> ... -> Resolution
+	- ***State Space***
+		- S = [cpu, memory, latency, error_rate, http_500, db_timeout, upstream_timeout, pod_restart, incident_class, confidence, recommended_action]
+		- S dimension = 11
+	- ***Action Space***
+		- A = {0: restart_service, 1: scale_up, 2: clear_cache, 3: rollback, 4: dependency_check, 5: no_action}
+		- A dimension = 6
+	- ***Transition Function***
+		- s(t+1)=T(s(t), a(t))
+		- metrics will change after every action
+	- ***Reward Function***
+		- R(s,a) = (latency improvement + error reduction + cpu recovery - step penalty)
+	- ***Policy***
+		- DQN - π_DQN(a|s)
+		- PPO - π_PPO(a|s)
+	- ***Termination***
+		- resolved or max steps reached
+- **DQN results**: 
+ {'episodes': 1000, 'avg_reward': 44, 'max_reward': 431, 'min_reward': -20, 'recommendation_follow_rate': 0.0, 'success_rate': 0.154, 'avg_steps': 5, 'max_steps': 5, 'mttr_minutes': 11.27, 'action_distribution': {'rollback': 4383, 'scale_up': 40, 'clear_cache': 154}, 'successful_action_distribution': {'rollback': 153, 'scale_up': 1}, 'incident_types': {'db_latency': 206, 'dependency_failure': 199, 'service_crash': 202, 'memory_leak': 196, 'cpu_spike': 197}}
+- **PPO results**:
+{'episodes': 1000, 'avg_reward': 185, 'max_reward': 548, 'min_reward': -20, 'recommendation_follow_rate': 0.3415, 'success_rate': 0.564, 'avg_steps': 3, 'max_steps': 5, 'mttr_minutes': 8.69, 'action_distribution': {'dependency_check': 908, 'scale_up': 845, 'clear_cache': 229, 'restart_service': 1178}, 'successful_action_distribution': {'scale_up': 251, 'restart_service': 253, 'clear_cache': 33, 'dependency_check': 27}, 'incident_types': {'service_crash': 219, 'cpu_spike': 191, 'db_latency': 190, 'memory_leak': 214, 'dependency_failure': 186}}
+
+#### Comparison
+|Metric|DQN|PPO
+|--|--|--
+| Avg Reward | 44 |185
+| Success Rate| 15.4% |56.4%
+| MTTR | 11.27 min |8.69 min
+| Avg Steps | 5 |3
+| Recommendation Follow Rate | 0% |34.1%
+
+#### Observations
+- PPO is clearly outperforming DQN in all key metrics
+- This proves that PPO is better suited than DQN for sequential incident remediation tasks in an autonomous AIOps environment.
+- PPO learned incident-specific policies efficiently
+- The Recommendation Follow Rate metric is a hint for RL agent to take recommended action. PPO utilizing the hint and exploring in other times.
+- MTTR metric highlights that PPO is resolving the incident in less time.
+- PPO now improved and performed better with multi-step environment, RCA and recommended hints, structured rewards.
+- However constructing structured rewards took lot of time to optimize the function. The metrics and signals are tricky and they need proper weights for RL agents to learn efficiently.
+- There could be hidden state dimensions and dynamics and hard to include all scenarios of issues in the environment.
+- For instance, though the environment is healthy, error rate could be high due to unexpected errors like client network latency, external factors etc. or the actions taken are not fully resolved the incident in given time. All these metrics are hard to capture and identify proactively.
+- This is where LLM can help to provide efficient dynamics and reasons for RL agent on the incident resolution steps it has taken. 

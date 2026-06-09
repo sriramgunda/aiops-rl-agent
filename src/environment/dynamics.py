@@ -5,40 +5,79 @@
 # based on the action taken and the incident type
 ACTION_EFFECTS = {
     "cpu_spike": {
-        "scale_up": 50,
-        "restart_service": -10,
-        "rollback": -20,
-        "clear_cache": -5,
-        "dependency_check": -10,
-        "no_action": -25
+        "scale_up": {
+            "cpu": -35,
+            "latency": -200,
+            "error_rate": -10
+        },
+        "restart_service": {
+            "cpu": -5,
+            "latency": -50,
+            "error_rate": -2
+        },
+        "clear_cache": {
+            "latency": -40
+        }
     },
 
     "memory_leak": {
-        "restart_service": 50,
-        "scale_up": -10,
-        "rollback": -10,
-        "clear_cache": -5,
-        "dependency_check": -10,
-        "no_action": -25
+        "restart_service": {
+            "memory": -45,
+            "latency": -150,
+            "error_rate": -10,
+            "pod_restart": -1
+        },
+        "scale_up": {
+            "memory": -5,
+            "latency": -10,
+            "error_rate": -1,
+        }
     },
 
     "service_crash": {
-        "restart_service": 50,
-        "rollback": 30,
-        "scale_up": -10,
-        "no_action": -30
+        "restart_service": {
+            "error_rate": -50,
+            "latency": -400,
+            "http_500": -1,
+            "pod_restart": -1
+        },
+
+        "rollback": {
+            "error_rate": -40,
+            "latency": -300,
+            "http_500": -1
+        }
     },
 
     "db_latency": {
-        "clear_cache": 50,
-        "restart_service": -5,
-        "scale_up": -5,
-        "no_action": -25
+        "clear_cache": {
+            "latency": -700,
+            "error_rate": -20,
+            "db_timeout": -1
+        },
+        "scale_up": {
+            "latency": -100,
+            "error_rate": -10,
+        }
     },
 
     "dependency_failure": {
-        "dependency_check": 50,
-        "restart_service": -10,
-        "no_action": -30
+        "dependency_check": {
+            "error_rate": -30,
+            "latency": -450,
+            "upstream_timeout": -1
+        },
+        "scale_up": {
+            "latency": -10,
+            "error_rate": -1,
+        }
+    },
+
+    "no_incident": {
+        "no_action": {
+            "cpu": 0,
+            "latency": 0,
+            "error_rate": 0
+        }
     }
 }

@@ -4,5 +4,6 @@ EXPERT_POLICY = {
     "memory_leak": "restart_service",
     "service_crash": "restart_service",
     "db_latency": "clear_cache",
-    "dependency_failure": "dependency_check"
+    "dependency_failure": "dependency_check",
+    "no_incident": "no_action"
 }
