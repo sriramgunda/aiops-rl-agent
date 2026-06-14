@@ -25,9 +25,12 @@ from src.environment.state_builder import build_state
 # based on the changes in incident metrics after taking an action.
 from src.reward.structured_reward import calculate_reward
 
+from src.llm.reward_judge import RewardJudge
+from src.reward.hybrid_reward import calculate_hybrid_reward
+
 class AIOpsEnv(gym.Env):
     # Initialize the AIOps environment with the incident generator, action space, and observation space.
-    def __init__(self):
+    def __init__(self, use_llm_reward=False):
         super().__init__()
         self.generator = IncidentGenerator()
         self.action_space = spaces.Discrete(len(ACTIONS))
@@ -50,7 +53,14 @@ class AIOpsEnv(gym.Env):
 
         self.max_steps = 5 # Maximum steps per episode to encourage faster resolution
         self.last_query = None
-        self.last_rca = None
+        self.last_rca = None        
+
+        # Use LLM judge for reward if true
+        self.use_llm_reward = use_llm_reward
+        self.reward_judge = RewardJudge()
+        if self.use_llm_reward:
+            print(f"LLM reward model selected")
+
 
     # Reset the environment to an initial state by generating a new incident and returning the initial observation.
     def reset(self, seed=None, options=None):
@@ -60,6 +70,9 @@ class AIOpsEnv(gym.Env):
             self.generator.set_seed(seed)
         self.state = self.generator.generate()
         #self.recommend_action = ACTIONS_MAP_NUM["no_action"] # no_action = 0
+
+        # Trajectory initialized
+        self.trajectory = []
         return self._obs(), {}
     
     # Step function to take an action in the environment,
@@ -69,6 +82,7 @@ class AIOpsEnv(gym.Env):
         action_name = ACTIONS[action]
         self.current_step += 1
         # print(f"Timestep: {self.current_step}")
+        llm_score = None
 
         before = self.state.copy() # Store the state before taking the action to calculate reward later
         
@@ -79,7 +93,7 @@ class AIOpsEnv(gym.Env):
             # Applied clamp to ensure metrics don't go negative
             self.state[metric] = max(0, self.state[metric] + change if metric in self.state else 0)
         
-        after = self.state.copy() # State after taking the action
+        after = self.state.copy() # State after taking the action        
 
         # Calculate the reward
         reward = calculate_reward(before, after, self.current_step)
@@ -102,6 +116,33 @@ class AIOpsEnv(gym.Env):
         if success:
             reward += 50 # Bonus reward for successful mitigation
         
+        # Update trajectory
+        self.trajectory.append({"action": action_name, "reward": reward})
+        trajectory = {
+            "incident": self.state["incident"],
+            "actions": [s["action"] for s in self.trajectory],
+            "resolved": success,
+            "mttr": self.current_step * 5
+        }
+
+        if done:
+            trajectory = {
+                "incident": self.state["incident"],
+                "actions": [s["action"] for s in self.trajectory],
+                "resolved": success,
+                "mttr": self.current_step * 5
+            }
+
+            if self.use_llm_reward:
+                llm_score = self.reward_judge.evaluate(trajectory)
+                reward = calculate_hybrid_reward(reward, llm_score, alpha=0.2)
+                # checking LLM scoring
+                print("\n===== LLM JUDGE =====")
+                print(trajectory)
+                print(f"LLM Score: {llm_score}")
+            else:
+                llm_score = None
+        
         print(f"action: {action}, recommended_action: {self.state['recommended_action']}, incident: {self.state['incident']}")
 
         new_observation = self._obs()
@@ -113,7 +154,9 @@ class AIOpsEnv(gym.Env):
             "next state": {
                 "query": self.last_query,
                 "rag result": self.last_rca
-                }
+                },
+            "llm_score": llm_score,
+            "trajectory": trajectory
             }
         print(f"info: {additional_info}")
 

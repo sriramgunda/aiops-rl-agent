@@ -12,7 +12,7 @@ set_seed(SEED)
 TIMESTEPS = 1000
 LOGGER_TIMESTEPS = TIMESTEPS / 10
 
-env = AIOpsEnv()
+env = AIOpsEnv(use_llm_reward=False)
 env.reset(seed=SEED)
 
 model = build_ppo(env, SEED)

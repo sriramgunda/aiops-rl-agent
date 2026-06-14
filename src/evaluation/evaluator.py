@@ -1,5 +1,6 @@
 # Evaluator class to assess the performance of the trained RL agent
 from collections import Counter
+from collections import defaultdict
 import pandas as pd
 import numpy as np
 
@@ -20,11 +21,13 @@ class Evaluator:
         total_steps = []
         resolved_steps = []
         successful_actions = []
+        llm_scores = []
         success_count = 0
         avg_mttr = 0
 
         action_counter = Counter()
         incident_counts = Counter()
+        incident_success = defaultdict(int)
         total_actions = 0
 
         correct_actions = 0
@@ -58,6 +61,10 @@ class Evaluator:
 
                 obs, reward, done, _, info = self.env.step(action)
 
+                llm_score = info.get("llm_score")
+                if llm_score is not None:
+                    llm_scores.append(llm_score)
+
                 episode_reward += reward
                 episode_steps += 1
             
@@ -66,6 +73,7 @@ class Evaluator:
 
             if info.get("success", False):
                 success_count += 1
+                incident_success[incident] += 1
                 resolved_steps.append(episode_steps)
                 successful_actions.append(action_name)
         
@@ -77,7 +85,22 @@ class Evaluator:
         
         # how many expert actions followed
         recommendation_follow_rate = round(correct_actions/total_actions, 4)
-        
+
+        # success rate by incident type
+        success_by_incident = {}
+        for incident in incident_counts:
+            success_by_incident[incident] = round(incident_success[incident] / incident_counts[incident], 4)
+
+        # calcualte llm scores metrics
+        if llm_scores:
+            avg_llm_score = round(np.mean(llm_scores), 2)
+            min_llm_score = round(np.min(llm_scores), 2)
+            max_llm_score = round(np.max(llm_scores), 2)
+        else:
+            avg_llm_score = None
+            min_llm_score = None
+            max_llm_score = None
+
         # print(total_rewards)
         print(f"correct_actions: {correct_actions}")
         print(f"total_steps_sum: {sum(total_steps)}")
@@ -96,5 +119,9 @@ class Evaluator:
             "mttr_minutes": round(float(avg_mttr) , 2),
             "action_distribution": dict(action_counter),
             "successful_action_distribution": dict(Counter(successful_actions)),
-            "incident_types": dict(incident_counts),         
+            "incident_types": dict(incident_counts),
+            "success_by_incident": success_by_incident,
+            "avg_llm_score": avg_llm_score,
+            "min_llm_score": min_llm_score,
+            "max_llm_score": max_llm_score,        
         }
