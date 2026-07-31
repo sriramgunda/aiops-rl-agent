@@ -1,0 +1,80 @@
+{
+    "ppo_inference_ms": {
+        "count": 3219,
+        "average": 1.564,
+        "minimum": 0.423,
+        "maximum": 49.328
+    },
+    "environment_step_ms": {
+        "count": 3219,
+        "average": 1449.161,
+        "minimum": 8.902,
+        "maximum": 438252.571
+    },
+    "telemetry_latency_ms": {
+        "count": 3219,
+        "average": 0.012,
+        "minimum": 0.003,
+        "maximum": 1.98
+    },
+    "rag_latency_ms": {
+        "count": 3219,
+        "average": 16.269,
+        "minimum": 0.003,
+        "maximum": 547.558
+    },
+    "rca_latency_ms": {
+        "count": 3219,
+        "average": 0.009,
+        "minimum": 0.001,
+        "maximum": 0.965
+    },
+    "state_builder_latency_ms": {
+        "count": 3219,
+        "average": 0.086,
+        "minimum": 0.005,
+        "maximum": 13.397
+    },
+    "pipeline_latency_ms": {
+        "count": 3219,
+        "average": 1448.528,
+        "minimum": 8.848,
+        "maximum": 438229.788
+    },
+    "adaptive_alpha": {
+        "count": 1000,
+        "average": 0.219,
+        "minimum": 0.156,
+        "maximum": 0.6
+    },
+    "rca_confidence": {
+        "count": 1000,
+        "average": 0.547,
+        "minimum": 0.0,
+        "maximum": 0.666
+    },
+    "llm_latency_ms": {
+        "count": 1000,
+        "average": 4609.484,
+        "minimum": 679.255,
+        "maximum": 438216.719
+    },
+    "episode_latency_ms": {
+        "count": 1000,
+        "average": 4706.231,
+        "minimum": 731.283,
+        "maximum": 438280.925
+    },
+    "cpu_percent": {
+        "count": 1000,
+        "average": 61.885,
+        "minimum": 15.6,
+        "maximum": 89.9
+    },
+    "memory_mb": {
+        "count": 1000,
+        "average": 71.355,
+        "minimum": 8.367,
+        "maximum": 83.605
+    }
+}

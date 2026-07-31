@@ -3,6 +3,7 @@
 # where an RL agent can take actions to mitigate incidents in a production environment.
 import gymnasium as gym
 import numpy as np
+import time
 
 from gymnasium import spaces
 from openai import timeout
@@ -28,10 +29,14 @@ from src.reward.structured_reward import calculate_reward
 from src.llm.reward_judge import RewardJudge
 from src.reward.hybrid_reward import calculate_hybrid_reward
 
+from src.monitoring.latency_tracker import LatencyTracker
+
+
 class AIOpsEnv(gym.Env):
     # Initialize the AIOps environment with the incident generator, action space, and observation space.
-    def __init__(self, use_llm_reward=False):
+    def __init__(self, use_llm_reward=False, debug=False):
         super().__init__()
+        self.debug = debug
         self.generator = IncidentGenerator()
         self.action_space = spaces.Discrete(len(ACTIONS))
 
@@ -73,7 +78,9 @@ class AIOpsEnv(gym.Env):
 
         # Trajectory initialized
         self.trajectory = []
-        return self._obs(), {}
+        self.last_latency = {}
+        obs = self._obs()
+        return obs, {}
     
     # Step function to take an action in the environment,
     # calculate the reward based on the action effect on the incident,
@@ -83,6 +90,9 @@ class AIOpsEnv(gym.Env):
         self.current_step += 1
         # print(f"Timestep: {self.current_step}")
         llm_score = None
+        alpha = None
+        confidence = None
+        pipeline_start = time.perf_counter()
 
         before = self.state.copy() # Store the state before taking the action to calculate reward later
         
@@ -97,6 +107,8 @@ class AIOpsEnv(gym.Env):
 
         # Calculate the reward
         reward = calculate_reward(before, after, self.current_step)
+        # TO DO:
+        # Use RCA confidence for adaptive alpha
         confidence_factor = self.last_rca["confidence"]
         if action == self.state["recommended_action"]:
             reward += 3
@@ -124,6 +136,8 @@ class AIOpsEnv(gym.Env):
             "resolved": success,
             "mttr": self.current_step * 5
         }
+        # capture structured reward before it is updating with LLM reward.
+        structured_reward = reward
 
         if done:
             trajectory = {
@@ -132,20 +146,45 @@ class AIOpsEnv(gym.Env):
                 "resolved": success,
                 "mttr": self.current_step * 5
             }
+            structured_reward = reward
 
             if self.use_llm_reward:
-                llm_score = self.reward_judge.evaluate(trajectory)
-                reward = calculate_hybrid_reward(reward, llm_score, alpha=0.2)
+                with LatencyTracker("llm") as timer:
+                    llm_score = self.reward_judge.evaluate(trajectory)
+
+                llm_latency = timer.elapsed_ms
+                #alpha = 0.2
+                confidence = self.last_rca["confidence"]   
+                #reward = calculate_hybrid_reward(reward, llm_score, alpha=alpha)
+                reward, alpha = calculate_hybrid_reward(
+                    structured_reward = reward,
+                    llm_score = llm_score,
+                    confidence = confidence
+                )
+                self.last_latency["llm_latency_ms"] = llm_latency
                 # checking LLM scoring
-                print("\n===== LLM JUDGE =====")
-                print(trajectory)
-                print(f"LLM Score: {llm_score}")
+                if self.debug:
+                    print("\n===== LLM JUDGE =====")
+                    print(trajectory)
+                    print(f"LLM Score: {llm_score}")
+                    print(
+                        f"Confidence={confidence:.2f} | "
+                        f"Alpha={alpha:.3f} | "
+                        f"LLM Score={llm_score} | "
+                        f"Reward={reward:.2f}"
+                    )
             else:
                 llm_score = None
+                alpha = None
+                confidence = None
         
         print(f"action: {action}, recommended_action: {self.state['recommended_action']}, incident: {self.state['incident']}")
 
         new_observation = self._obs()
+
+        pipeline_latency = (time.perf_counter() - pipeline_start) * 1000
+        self.last_latency["pipeline_latency_ms"] = pipeline_latency
+        
         additional_info = {
             "success":success,
             "step":self.current_step,
@@ -156,9 +195,22 @@ class AIOpsEnv(gym.Env):
                 "rag result": self.last_rca
                 },
             "llm_score": llm_score,
-            "trajectory": trajectory
+            "trajectory": trajectory,
+            "latency": self.last_latency,
             }
-        print(f"info: {additional_info}")
+        additional_info["pipeline_latency_ms"] = pipeline_latency
+        combined_reward = reward
+        additional_info["structured_reward"] = structured_reward
+        additional_info["combined_reward"] = combined_reward
+        additional_info["hybrid_reward"] = reward
+        if alpha is not None:
+            additional_info["adaptive_alpha"] = alpha
+
+        if confidence is not None:
+            additional_info["rca_confidence"] = confidence
+        
+        if self.debug:
+            print(f"info: {additional_info}")
 
         return (
             new_observation, # New observation after taking the action
@@ -181,18 +233,35 @@ class AIOpsEnv(gym.Env):
             f"upstream_timeout {self.state['upstream_timeout']} "
             f"pod_restart {self.state['pod_restart']}"
         )
-        query = TelemetryTranslator.to_text(self.state)
+
+        latency_metrics = getattr(self, "last_latency", {}).copy()
+
+        with LatencyTracker("telemetry") as timer:
+            query = TelemetryTranslator.to_text(self.state)
+        latency_metrics["telemetry_latency_ms"] = timer.elapsed_ms
+
         self.last_query = query
+
         # rag retriever to get relevant historical incidents
-        retrieved = self.retriever.retrieve(query)
+        with LatencyTracker("rag") as timer:
+            retrieved = self.retriever.retrieve(query)
+        latency_metrics["rag_latency_ms"] = timer.elapsed_ms
+
         # perform RCA
-        rca = self.rca_agent.analyze(retrieved)
+        with LatencyTracker("rca") as timer:
+            rca = self.rca_agent.analyze(retrieved)
+        latency_metrics["rca_latency_ms"] = timer.elapsed_ms
         self.last_rca = rca
 
         # capture the recommended action to use for next step
         #self.recommend_action = ACTIONS_MAP_NUM[rca["recommended_action"]]
 
-        return np.array(build_state(self.state, rca), dtype=np.float32)
+        with LatencyTracker("state_builder") as timer:
+            observation = np.array(build_state(self.state, rca), dtype=np.float32)
+        latency_metrics["state_builder_latency_ms"] = timer.elapsed_ms
+        self.last_latency = latency_metrics
+
+        return observation
     
     # Expert policy to determine the expected action for a given incident type,
     # which is used for evaluation purposes to compare the RL agent actions

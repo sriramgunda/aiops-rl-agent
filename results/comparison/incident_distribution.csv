@@ -1,0 +1,6 @@
+Incident,Structured,Fixed Alpha,Adaptive Alpha
+service_crash,219,188,183
+cpu_spike,191,217,184
+db_latency,190,195,250
+memory_leak,214,203,192
+dependency_failure,186,197,191

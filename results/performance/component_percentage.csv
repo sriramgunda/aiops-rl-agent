@@ -1,0 +1,8 @@
+Component,Average(ms),Percentage
+Telemetry,0.012,0.0
+RAG,16.269,1.12
+RCA,0.009,0.0
+State Builder,0.086,0.01
+PPO,1.564,0.11
+Environment Processing,1430.588,98.76
+Decision Pipeline Total,1448.528,100.0

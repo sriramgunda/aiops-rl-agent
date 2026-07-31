@@ -1,0 +1,12 @@
+Component,Average(ms),Minimum(ms),Maximum(ms)
+ppo_inference_ms,1.11,0.434,68.418
+environment_step_ms,1215.591,7.994,32469.766
+telemetry_latency_ms,0.011,0.003,1.014
+rag_latency_ms,14.345,0.003,513.15
+rca_latency_ms,0.008,0.001,0.964
+state_builder_latency_ms,0.04,0.005,8.007
+pipeline_latency_ms,1215.571,7.988,32468.26
+llm_latency_ms,3678.612,714.819,32457.228
+episode_latency_ms,3841.735,747.058,32546.321
+cpu_percent,61.665,33.4,90.6
+memory_mb,72.36,11.305,82.062

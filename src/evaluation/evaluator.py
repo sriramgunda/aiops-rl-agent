@@ -3,6 +3,12 @@ from collections import Counter
 from collections import defaultdict
 import pandas as pd
 import numpy as np
+import time
+import json
+import os
+
+from src.monitoring.latency_tracker import LatencyTracker
+from src.monitoring.report_generator import ReportGenerator
 
 from src.environment.actions import ACTIONS
 from src.utils.seeding import set_seed
@@ -12,9 +18,17 @@ from src.utils.seeding import set_seed
 STEP_DURATION_MINUTES = 5 # Assumption of step duration for MTTR calculation
 
 class Evaluator:
-    def __init__(self, env, model):
+    def __init__(self, env, model, enable_monitoring=True):
         self.env = env
         self.model = model
+        self.enable_monitoring = enable_monitoring
+
+        if enable_monitoring:
+            from src.monitoring.metrics_collector import MetricsCollector
+            from src.monitoring.resource_monitor import ResourceMonitor
+
+            self.collector = MetricsCollector()
+            self.resource_monitor = ResourceMonitor()
 
     def evaluate(self, episodes=1000):
         total_rewards = []
@@ -32,7 +46,8 @@ class Evaluator:
 
         correct_actions = 0
 
-        for _ in range(episodes):
+        for episode in range(episodes):
+            episode_start = time.perf_counter()
             obs, _ = self.env.reset()
             done = False
             episode_reward = 0
@@ -42,10 +57,14 @@ class Evaluator:
             incident_counts[incident] += 1
 
             while not done:
-                action, _ = self.model.predict(
-                    obs,
-                    deterministic=True
-                )
+                with LatencyTracker("ppo") as timer:
+                    action, _ = self.model.predict(
+                        obs,
+                        deterministic=True
+                    )
+
+                if self.enable_monitoring:
+                    self.collector.add_metric("ppo_inference_ms", timer.elapsed_ms)
 
                 if isinstance(action, np.ndarray):
                     action = int(action.item())
@@ -59,8 +78,23 @@ class Evaluator:
                 if action_name == expected:
                     correct_actions += 1
 
-                obs, reward, done, _, info = self.env.step(action)
+                with LatencyTracker("environment") as timer:
+                    obs, reward, done, _, info = self.env.step(action)
 
+                if self.enable_monitoring:
+                    self.collector.add_metric("environment_step_ms", timer.elapsed_ms)
+                    # Collect component latency metrics
+                    latency_metrics = info.get("latency", {})
+                    if "adaptive_alpha" in info:
+                        self.collector.add_metric("adaptive_alpha", info["adaptive_alpha"])
+
+                    if "rca_confidence" in info:
+                        self.collector.add_metric("rca_confidence", info["rca_confidence"])
+                    
+                    for key, value in latency_metrics.items():
+                        self.collector.add_metric(key, value)
+
+                
                 llm_score = info.get("llm_score")
                 if llm_score is not None:
                     llm_scores.append(llm_score)
@@ -68,6 +102,14 @@ class Evaluator:
                 episode_reward += reward
                 episode_steps += 1
             
+            episode_latency = (time.perf_counter() - episode_start) * 1000
+            if self.enable_monitoring:
+                self.collector.add_metric("episode_latency_ms",episode_latency)
+                resources = self.resource_monitor.snapshot()
+
+                self.collector.add_metric("cpu_percent", resources["cpu_percent"])
+                self.collector.add_metric("memory_mb", resources["memory_mb"])
+
             total_rewards.append(episode_reward)
             total_steps.append(episode_steps)
 
@@ -107,7 +149,11 @@ class Evaluator:
         print(f"success_count: {success_count}")
         # print(f"total_steps: {total_steps}")
 
-        return {
+        if self.enable_monitoring:
+            performance_summary = self.collector.summary()
+            ReportGenerator.save(performance_summary, "results/performance_report.json")        
+        
+        results = {
             "episodes": episodes,
             "avg_reward": round(np.mean(total_rewards)),
             "max_reward": round(np.max(total_rewards)),
@@ -123,5 +169,13 @@ class Evaluator:
             "success_by_incident": success_by_incident,
             "avg_llm_score": avg_llm_score,
             "min_llm_score": min_llm_score,
-            "max_llm_score": max_llm_score,        
+            "max_llm_score": max_llm_score,
+            "performance": performance_summary if self.enable_monitoring else None,        
         }
+
+        os.makedirs("results", exist_ok=True)
+        with open("results/evaluation_summary.json", "w") as f:
+            json.dump(results, f, indent=4)
+        print("Evaluation summary saved to results/evaluation_summary.json")
+
+        return results

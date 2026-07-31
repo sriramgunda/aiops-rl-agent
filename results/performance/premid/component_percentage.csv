@@ -1,0 +1,6 @@
+Component,Average(ms),Percentage
+telemetry_latency_ms,0.011,0.0
+rag_latency_ms,14.345,1.18
+rca_latency_ms,0.008,0.0
+state_builder_latency_ms,0.04,0.0
+llm_latency_ms,3678.612,302.62

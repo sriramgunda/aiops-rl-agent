@@ -1,0 +1,6 @@
+Metric,Fixed vs Structured (%),Adaptive vs Structured (%),Adaptive vs Fixed (%)
+Average Reward,2.7,-1.62,-4.21
+Success Rate,3.01,-4.26,-7.06
+Recommendation Follow Rate,5.15,1.43,-3.54
+MTTR (minutes),2.19,-2.07,-4.17
+Average Steps,0.0,0.0,0.0

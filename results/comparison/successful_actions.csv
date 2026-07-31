@@ -1,0 +1,5 @@
+Successful Action,Structured,Fixed Alpha,Adaptive Alpha
+scale_up,251,264,237
+restart_service,253,272,235
+clear_cache,33,25,45
+dependency_check,27,20,23

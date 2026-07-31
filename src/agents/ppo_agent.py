@@ -12,7 +12,7 @@ def build_ppo(env, seed=42):
         gamma = 0.99, # discount factor for long term reward importance
         gae_lambda = 0.95, # advantage estimation
         clip_range = 0.2, # clipping for PPO stability
-        ent_coef = 0.02, # exploration factor
+        ent_coef = 0.02, # entropy coefficient for loss calcualtion and encourages exploration
         vf_coef = 0.5, # value function weight
         verbose = 1
     )

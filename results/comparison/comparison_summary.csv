@@ -1,0 +1,6 @@
+Metric,Structured,Fixed Alpha,Adaptive Alpha
+Average Reward,185.0,190.0,182.0
+Success Rate,0.564,0.581,0.54
+Recommendation Follow Rate,0.3415,0.3591,0.3464
+MTTR (minutes),8.69,8.88,8.51
+Average Steps,3.0,3.0,3.0

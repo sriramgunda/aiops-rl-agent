@@ -7,11 +7,11 @@ from src.evaluation.evaluator import Evaluator
 from src.utils.seeding import set_seed
 
 set_seed(42)
-env = AIOpsEnv(use_llm_reward=True)
+env = AIOpsEnv(use_llm_reward=True, debug=True)
 
 model = PPO.load("results/ppo/ppo_llm_reward")
-evaluator = Evaluator(env, model)
-results = evaluator.evaluate()
+evaluator = Evaluator(env, model, enable_monitoring=True)
+results = evaluator.evaluate(episodes=1000)
 print("\n===== PPO with LLM reward results =========")
 print(results)
 print("\n------------------")

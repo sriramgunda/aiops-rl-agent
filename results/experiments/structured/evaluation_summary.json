@@ -1,0 +1,30 @@
+{
+   "episodes":1000,
+   "avg_reward":185,
+   "max_reward":548,
+   "min_reward":-20,
+   "recommendation_follow_rate":0.3415,
+   "success_rate":0.564,
+   "avg_steps":3,
+   "max_steps":5,
+   "mttr_minutes":8.69,
+   "action_distribution":{
+      "dependency_check":908,
+      "scale_up":845,
+      "clear_cache":229,
+      "restart_service":1178
+   },
+   "successful_action_distribution":{
+      "scale_up":251,
+      "restart_service":253,
+      "clear_cache":33,
+      "dependency_check":27
+   },
+   "incident_types":{
+      "service_crash":219,
+      "cpu_spike":191,
+      "db_latency":190,
+      "memory_leak":214,
+      "dependency_failure":186
+   }
+}
